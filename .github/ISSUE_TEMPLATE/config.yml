@@ -1,0 +1,11 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Taskade help center
+    url: https://help.taskade.com/en/
+    about: Questions about your Taskade account, your plan or the Taskade app
+  - name: Taskade MCP documentation
+    url: https://www.taskade.com/docs/mcp
+    about: How to connect an agent to the hosted Taskade MCP server
+  - name: Report a security problem
+    url: https://github.com/taskade/skills/blob/main/SECURITY.md
+    about: Do not open a public issue for a security problem

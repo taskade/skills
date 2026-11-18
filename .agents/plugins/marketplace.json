@@ -1,0 +1,20 @@
+{
+  "name": "taskade-skills",
+  "interface": {
+    "displayName": "Taskade Skills"
+  },
+  "plugins": [
+    {
+      "name": "taskade",
+      "source": {
+        "source": "local",
+        "path": "./plugins/taskade"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Productivity"
+    }
+  ]
+}

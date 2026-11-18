@@ -1,0 +1,64 @@
+name: Check
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    name: Skills and manifests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          fetch-depth: 0
+
+      - name: Install Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22
+
+      - name: Run the self-test
+        run: node scripts/check.mjs --self-test
+
+      - name: Run the self-test of the sync script
+        run: ./scripts/sync-mcp.sh --self-test
+
+      - name: Check the plugin folder, the skills and the manifests
+        if: github.event_name != 'pull_request'
+        run: node scripts/check.mjs
+
+      - name: Check, and require a new version when the plugin folder changes
+        if: github.event_name == 'pull_request'
+        env:
+          BASE_REF: ${{ github.base_ref }}
+        run: node scripts/check.mjs --base "origin/$BASE_REF"
+
+  mcp-report:
+    # A report, not a rule. taskade/mcp follows this repository after a maintainer syncs it.
+    name: Difference from taskade/mcp
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+
+      - name: Checkout taskade/mcp
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          repository: taskade/mcp
+          path: .mcp-checkout
+
+      - name: Install Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22
+
+      - name: Write the report
+        run: node scripts/check.mjs --mcp .mcp-checkout >> "$GITHUB_STEP_SUMMARY"

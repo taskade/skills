@@ -1,0 +1,51 @@
+name: A skill gave a wrong result
+description: A skill told the agent to do a wrong step, or stated something that Taskade does not do
+labels: ["skill"]
+body:
+  - type: dropdown
+    id: skill
+    attributes:
+      label: Skill
+      options:
+        - taskade
+        - taskade-build-app
+        - taskade-spreadsheet-to-app
+        - taskade-fix-app
+        - taskade-report
+        - taskade-check-app
+        - taskade-fix-first-screen
+        - taskade-secure-app
+        - taskade-clone-kit
+        - taskade-publish-app
+        - taskade-build-agent
+        - taskade-repo-to-project
+        - taskade-markdown
+        - I do not know
+    validations:
+      required: true
+  - type: input
+    id: agent
+    attributes:
+      label: Agent
+      description: For example Claude Code, Cursor or Codex, with the version
+    validations:
+      required: true
+  - type: textarea
+    id: asked
+    attributes:
+      label: What you asked
+      description: The request that you gave to the agent. Remove private data.
+    validations:
+      required: true
+  - type: textarea
+    id: result
+    attributes:
+      label: What the agent did
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What you expected
+    validations:
+      required: true

@@ -1,0 +1,25 @@
+name: Propose a new skill
+description: A job in Taskade that no skill covers
+labels: ["new skill"]
+body:
+  - type: textarea
+    id: job
+    attributes:
+      label: The job
+      description: What does a person ask the agent to do? Give one or two example requests.
+    validations:
+      required: true
+  - type: textarea
+    id: today
+    attributes:
+      label: What occurs today
+      description: What does the agent do with that request now?
+    validations:
+      required: true
+  - type: textarea
+    id: tools
+    attributes:
+      label: Tools
+      description: Which tools of the Taskade MCP server does the job need? Write "none" if the job needs no connection.
+    validations:
+      required: false

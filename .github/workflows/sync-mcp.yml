@@ -1,0 +1,200 @@
+name: Sync to taskade/mcp
+
+# taskade/mcp holds a generated copy of the plugin. For each version tag, this workflow runs
+# scripts/sync-mcp.sh and opens a pull request in taskade/mcp. A maintainer reviews and
+# merges that pull request.
+#
+# The token is the secret TASKADE_MCP_SYNC_TOKEN of the GitHub environment mcp-sync. A job
+# can read an environment secret only when it names the environment. So the one job of this
+# workflow names mcp-sync, and its first step looks for the secret. With no secret, for
+# example in a fork, that step prints a notice, each other step is skipped, and the run does
+# not fail. A second job that only looks for the secret must name mcp-sync too, and then a
+# reviewer of the environment must approve each run two times.
+#
+# Each action is pinned to a full commit SHA. The comment gives the version of that commit.
+
+on:
+  push:
+    tags:
+      - 'taskade--v*'
+  release:
+    types:
+      - published
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: The tag to sync, for example taskade--v0.4.0. Pick the same tag in "Use workflow from".
+        required: true
+
+permissions:
+  contents: read
+
+# A release and its tag can start two runs. The second run waits for the first run. Then it
+# writes the same files to the same branch and finds the open pull request.
+concurrency:
+  group: sync-mcp
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    name: Open a pull request in taskade/mcp
+    # A release with a tag of another form does not start a sync.
+    if: github.event_name != 'release' || startsWith(github.event.release.tag_name, 'taskade--v')
+    runs-on: ubuntu-latest
+    environment: mcp-sync
+    env:
+      TAG: ${{ inputs.tag || github.event.release.tag_name || github.ref_name }}
+    steps:
+      - name: Find the secret TASKADE_MCP_SYNC_TOKEN
+        id: token
+        env:
+          SYNC_TOKEN: ${{ secrets.TASKADE_MCP_SYNC_TOKEN }}
+        run: |
+          if [ -z "$SYNC_TOKEN" ]; then
+            echo "::notice title=Sync skipped::The secret TASKADE_MCP_SYNC_TOKEN of the environment mcp-sync is not set, so this run opens no pull request in taskade/mcp. CONTRIBUTING.md tells how to set the secret. It also gives the steps of a sync by hand."
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Check the tag name
+        if: steps.token.outputs.ready == 'true'
+        run: |
+          if [[ ! "$TAG" =~ ^taskade--v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::$TAG is not a plugin version tag. Use a tag such as taskade--v0.4.0."
+            exit 1
+          fi
+
+      # fetch-depth 0 fetches each branch and each tag. The next steps need origin/main.
+      - name: Checkout the tag
+        if: steps.token.outputs.ready == 'true'
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          ref: refs/tags/${{ env.TAG }}
+          fetch-depth: 0
+
+      # A tag can point at any commit, also a commit that no pull request reviewed. Only a
+      # commit on main can reach taskade/mcp.
+      - name: Check that the tag is on main
+        if: steps.token.outputs.ready == 'true'
+        run: |
+          git fetch --quiet --no-tags origin +refs/heads/main:refs/remotes/origin/main
+          if ! git merge-base --is-ancestor HEAD origin/main; then
+            echo "::error title=Tag not on main::The commit $(git rev-parse HEAD) of $TAG is not on main. Tag a merge commit of main, then run the sync again."
+            exit 1
+          fi
+
+      - name: Install Node.js
+        if: steps.token.outputs.ready == 'true'
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22
+
+      - name: Check that the tag names the plugin version
+        if: steps.token.outputs.ready == 'true'
+        run: |
+          version="$(node -p "require('./plugins/taskade/plugin.json').version")"
+          if [ "$TAG" != "taskade--v$version" ]; then
+            echo "::error::The tag $TAG does not match the plugin version $version."
+            exit 1
+          fi
+          echo "VERSION=$version" >> "$GITHUB_ENV"
+          echo "SOURCE_SHA=$(git rev-parse HEAD)" >> "$GITHUB_ENV"
+
+      - name: Check the plugin folder, the skills and the manifests
+        if: steps.token.outputs.ready == 'true'
+        run: node scripts/check.mjs
+
+      - name: Checkout taskade/mcp
+        if: steps.token.outputs.ready == 'true'
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          repository: taskade/mcp
+          token: ${{ secrets.TASKADE_MCP_SYNC_TOKEN }}
+          path: .mcp-checkout
+
+      - name: Write the plugin into taskade/mcp
+        if: steps.token.outputs.ready == 'true'
+        run: ./scripts/sync-mcp.sh .mcp-checkout
+
+      - name: Open the pull request
+        if: steps.token.outputs.ready == 'true'
+        working-directory: .mcp-checkout
+        env:
+          GH_TOKEN: ${{ secrets.TASKADE_MCP_SYNC_TOKEN }}
+        run: |
+          branch="sync/$TAG"
+          # An older sync pull request that merges after a newer one puts old files back.
+          # A run stops when a sync pull request of a newer version is open. Before it ends,
+          # it closes each open sync pull request of an older version and deletes its branch.
+          # Only a branch of taskade/mcp itself counts: a pull request from a fork is never a
+          # sync, and this run never deletes a branch of a fork.
+          open_syncs="$(gh pr list --repo taskade/mcp --state open --limit 100 --json number,headRefName,isCrossRepository \
+            --jq '.[] | select((.isCrossRepository | not) and (.headRefName | startswith("sync/taskade--v"))) | "\(.number) \(.headRefName)"')"
+          close_older() {
+            for entry in "${older[@]}"; do
+              number="${entry%% *}"
+              head_ref="${entry#* }"
+              if [[ "$head_ref" == sync/taskade--v* ]]; then
+                gh pr close "$number" --repo taskade/mcp --delete-branch --comment "$1"
+              fi
+            done
+          }
+          older=()
+          while read -r number head_ref; do
+            if [ -z "$number" ]; then
+              continue
+            fi
+            version="${head_ref#sync/taskade--v}"
+            if [ "$version" = "$VERSION" ]; then
+              continue
+            fi
+            if [ "$(printf '%s\n%s\n' "$version" "$VERSION" | sort -V | tail -n 1)" = "$version" ]; then
+              echo "::notice title=Sync skipped::The sync pull request #$number of the newer version $version is open. Merge or close it before a sync of $VERSION."
+              exit 0
+            fi
+            older+=("$number $head_ref")
+          done <<< "$open_syncs"
+          if [ -z "$(git status --porcelain)" ]; then
+            echo "taskade/mcp already holds the plugin of $TAG. No pull request is necessary."
+            close_older "taskade/mcp holds the newer version $VERSION already, so this pull request is not necessary."
+            exit 0
+          fi
+          git switch -c "$branch"
+          git add --all
+          git -c user.name='github-actions[bot]' \
+            -c user.email='41898273+github-actions[bot]@users.noreply.github.com' \
+            commit --quiet --message "chore(plugin): Sync the plugin of taskade/skills $VERSION"
+          # This workflow owns the branch. A new run writes the same files for the same tag,
+          # so a run after a failed step can finish the pull request. When the branch holds
+          # the same tree already, the run does not push. A push dismisses the approvals of
+          # the pull request.
+          remote_sha="$(git ls-remote origin "refs/heads/$branch" | cut -f 1)"
+          same_tree=false
+          if [ -n "$remote_sha" ]; then
+            git fetch --quiet --depth 1 origin "refs/heads/$branch"
+            if [ "$(git rev-parse 'FETCH_HEAD^{tree}')" = "$(git rev-parse 'HEAD^{tree}')" ]; then
+              same_tree=true
+            fi
+          fi
+          if [ "$same_tree" = true ]; then
+            echo "The branch $branch holds the same files already. This run does not push."
+          else
+            git push --force origin "$branch"
+          fi
+          url="$(gh pr list --repo taskade/mcp --head "$branch" --state open --json url,isCrossRepository \
+            --jq '[.[] | select(.isCrossRepository | not)][0].url // empty')"
+          if [ -n "$url" ]; then
+            echo "The pull request for $branch is open already."
+            close_older "The sync of the newer version $VERSION replaces this pull request: $url"
+            exit 0
+          fi
+          body="$(printf '%s\n\n%s\n\n%s\n' \
+            "This pull request holds the plugin of taskade/skills $VERSION (tag \`$TAG\`, commit \`$SOURCE_SHA\`). The workflow \"Sync to taskade/mcp\" of taskade/skills opened it with \`scripts/sync-mcp.sh\`." \
+            "It replaces \`skills/\` and \`plugins/taskade/skills/\`, writes \`plugins/taskade/README.md\`, \`.mcp.json\` and the logo, and sets the plugin version $VERSION in the manifests. The npm packages and their versions do not change." \
+            "Before the merge, write the release notes of $VERSION in \`extensions[\"com.openai\"].publication.release_notes\` of \`plugin.json\`. When the skills change what the plugin does, also update \`longDescription\`, \`shortDescription\` and \`defaultPrompt\` in \`extensions[\"com.openai\"].interface\`. The sync does not write these fields. Edit a skill in taskade/skills. A change to a skill here goes away at the next sync.")"
+          url="$(gh pr create --repo taskade/mcp --base main --head "$branch" \
+            --title "chore(plugin): Sync the plugin of taskade/skills $VERSION" \
+            --body "$body")"
+          echo "$url"
+          close_older "The sync of the newer version $VERSION replaces this pull request: $url"
