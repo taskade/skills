@@ -1,0 +1,285 @@
+{
+  "about": "Trigger test set. An agent client picks a skill from its name and description alone. Each prompt under `must` must select that skill. Each prompt under `nearMiss` must select the skill in `expect`, or no Taskade skill when `expect` is `none`. scripts/check-triggers.mjs checks the shape of this file. TRIGGERS.md records how each prompt was judged.",
+  "skills": {
+    "taskade": {
+      "must": [
+        "set up taskade in my claude code",
+        "connect my taskade account pls",
+        "what can you do in taskade for me",
+        "whats in my workspace",
+        "add a task to the Launch project to book the venue for friday",
+        "show my content plan as a board instead of a list",
+        "why is my calender empty, i added dates to everything",
+        "the taskade tool keeps saying i need to upgrade",
+        "hook up taskade to cursor",
+        "move the call the printer task to tomorrow and assign it to Sam",
+        "how much does taskade cost for a team of 5",
+        "run my daily digest automation now"
+      ],
+      "nearMiss": [
+        { "prompt": "check my apps and tell me what to fix first", "expect": "taskade-check-app" },
+        { "prompt": "import leads.csv into my CRM project, skip duplicates", "expect": "taskade-spreadsheet-to-app" },
+        { "prompt": "weekly status report of my workspace", "expect": "taskade-report" },
+        { "prompt": "make me an agent that answers refund questions from our policy doc", "expect": "taskade-build-agent" },
+        { "prompt": "publish my app", "expect": "taskade-publish-app" },
+        { "prompt": "build me a booking app for my studio", "expect": "taskade-build-app" },
+        { "prompt": "whats the weather in lisbon tomorrow", "expect": "none" }
+      ]
+    },
+    "taskade-build-app": {
+      "must": [
+        "build me an app for my agency's clients",
+        "I need a client portal",
+        "need a simple CRM for my roofing company",
+        "can u make a booking system for my hair salon",
+        "turn our onboarding process into an app",
+        "i want a dashbord that shows our sales numbers",
+        "plan an inventory tracker for my bakery before we build anything",
+        "my team logs repair requests on paper, can taskade run that for us",
+        "i want my students to hand in homework online and i grade it",
+        "something where my staff can log maintenance requests and I approve them",
+        "make an app with an AI agent that qualifies new leads"
+      ],
+      "nearMiss": [
+        { "prompt": "use the CRM kit from taskade.com/apps and make it mine", "expect": "taskade-clone-kit" },
+        { "prompt": "turn this xlsx of customers into a table in taskade", "expect": "taskade-spreadsheet-to-app" },
+        { "prompt": "make me an AI agent that answers questions about our menu", "expect": "taskade-build-agent" },
+        { "prompt": "my booking app shows a blank page", "expect": "taskade-fix-app" },
+        { "prompt": "scaffold a react app with vite on my laptop", "expect": "none" }
+      ]
+    },
+    "taskade-spreadsheet-to-app": {
+      "must": [
+        "import this spreadsheet into taskade",
+        "turn this xlsx into something my team can use",
+        "load my leads from leads.csv",
+        "add these 300 contacts to my CRM, no dupes pls",
+        "put my product catalog excel into the inventory app",
+        "here is clients.csv from my old crm, get it into taskade",
+        "update my stock project from the new inventory.xlsx without making doubles",
+        "i have a sheet of volunteers with names and phone numbers, make it a taskade table",
+        "500 rows of products in this file, bring them into the shop app but skip the ones already there"
+      ],
+      "nearMiss": [
+        { "prompt": "write a CSV I can import into Taskade for my wedding checklist", "expect": "taskade-markdown" },
+        { "prompt": "build me a CRM app with a pipeline page and follow up automations", "expect": "taskade-build-app" },
+        { "prompt": "excel formula to sum column B only if column A says paid", "expect": "none" },
+        { "prompt": "turn the open github issues of this repo into a taskade project", "expect": "taskade-repo-to-project" },
+        { "prompt": "how many leads in my pipeline are overdue", "expect": "taskade-report" }
+      ]
+    },
+    "taskade-clone-kit": {
+      "must": [
+        "clone this kit and make it mine",
+        "I found a CRM on taskade.com/apps, can I use it for my business",
+        "use this template from the taskade gallery for my gym",
+        "copy the client portal kit into my workspace and put my colors on it",
+        "theres an app on your site i like, the restaurant one. can i have it",
+        "how do i rebrand a kit i just cloned",
+        "i copied the booking kit, swap in my business name and turn its automations on",
+        "got a link to an app kit from a friend, set it up for me",
+        "start from a ready made kit instead of building from scratch"
+      ],
+      "nearMiss": [
+        { "prompt": "build me a booking app from scratch", "expect": "taskade-build-app" },
+        { "prompt": "publish a new version of my kit", "expect": "taskade-publish-app" },
+        { "prompt": "make a copy of my app before I change it", "expect": "taskade-publish-app" },
+        { "prompt": "git clone this repo and make tasks from its TODOs", "expect": "taskade-repo-to-project" },
+        { "prompt": "bring my real customer list into the kit I cloned, from customers.csv", "expect": "taskade-spreadsheet-to-app" },
+        { "prompt": "start a new project from the weekly planner template in taskade", "expect": "taskade" }
+      ]
+    },
+    "taskade-build-agent": {
+      "must": [
+        "make me an agent",
+        "build an AI agent that answers my clients from my price list",
+        "train an agent on my docs",
+        "my support bot keeps making up refund rules",
+        "change the instructions of my sales agent",
+        "test my agent with a few questions before I share it",
+        "delete the old HR agent",
+        "teach my assistant our services and opening hours",
+        "my agent cant see the new pricing doc i uploaded",
+        "make a chatbot that answers questions about my courses",
+        "embed my support agent on my website"
+      ],
+      "nearMiss": [
+        { "prompt": "build me an app that my clients log into", "expect": "taskade-build-app" },
+        { "prompt": "I need a lead tracker app where an agent scores each new lead", "expect": "taskade-build-app" },
+        { "prompt": "set up an automation that posts to slack every monday", "expect": "taskade" },
+        { "prompt": "ask my sales agent which deals are closing this week", "expect": "taskade" },
+        { "prompt": "the contact form on my app does nothing when I click send", "expect": "taskade-fix-app" },
+        { "prompt": "write a system prompt for my custom gpt in chatgpt", "expect": "none" }
+      ]
+    },
+    "taskade-check-app": {
+      "must": [
+        "is my app ok",
+        "check my apps",
+        "run a health check on my portal before launch",
+        "what should i fix first in my taskade apps",
+        "audit my app, dont change anything",
+        "is my app ready to share with clients",
+        "go through my booking app and tell me whats broken",
+        "is anything wrong with my apps",
+        "give my portal a once-over before I send it to clients",
+        "which of my apps need attention"
+      ],
+      "nearMiss": [
+        { "prompt": "the submit button on my app does nothing, fix it", "expect": "taskade-fix-app" },
+        { "prompt": "clients can see each others invoices in my portal", "expect": "taskade-secure-app" },
+        { "prompt": "my app looks cheap on mobile", "expect": "taskade-fix-first-screen" },
+        { "prompt": "are my automations working this week", "expect": "taskade-report" },
+        { "prompt": "what is in my workspace", "expect": "taskade" },
+        { "prompt": "check my spelling in this paragraph", "expect": "none" }
+      ]
+    },
+    "taskade-fix-app": {
+      "must": [
+        "my app is broken",
+        "my app shows a blank page after I published it",
+        "the save button does nothing",
+        "data doesnt show up in my app even tho the project has rows",
+        "my clients see an error when they log in",
+        "change the heading on the home page of my app to Book a call",
+        "when my customers click Book now nothing happens",
+        "the jobs page says No jobs yet but there are 20 jobs in the project",
+        "my app is stuck on loading forever",
+        "the form on my app stopped sending me the email"
+      ],
+      "nearMiss": [
+        { "prompt": "make my app look less generic on phones", "expect": "taskade-fix-first-screen" },
+        { "prompt": "health check of all my apps", "expect": "taskade-check-app" },
+        { "prompt": "who can see the client list in my portal", "expect": "taskade-secure-app" },
+        { "prompt": "undo my last change to the app", "expect": "taskade-publish-app" },
+        { "prompt": "fix the failing test in my python script", "expect": "none" }
+      ]
+    },
+    "taskade-fix-first-screen": {
+      "must": [
+        "my app looks generic",
+        "it looks AI made, make it look pro",
+        "looks bad on my phone",
+        "nobody clicks anything when they open my app",
+        "visitors leave right away",
+        "my app looks like every other template",
+        "on my iphone the buttons are tiny and you have to scroll sideways",
+        "make the home screen of my app show the numbers right away",
+        "the first thing people see in my portal is a wall of text"
+      ],
+      "nearMiss": [
+        { "prompt": "the page is blank", "expect": "taskade-fix-app" },
+        { "prompt": "check my app before i share it", "expect": "taskade-check-app" },
+        { "prompt": "build me a new app for my yoga studio", "expect": "taskade-build-app" },
+        { "prompt": "publish the new first screen", "expect": "taskade-publish-app" },
+        { "prompt": "change the font on my wordpress blog", "expect": "none" }
+      ]
+    },
+    "taskade-secure-app": {
+      "must": [
+        "who can see my app",
+        "who can see the client list in my portal",
+        "make my app private",
+        "my customers can see each others bookings!!",
+        "is my app safe to share",
+        "lock down my portal so only people i invite can sign up",
+        "can strangers write to my private list through the public form",
+        "before I publish, make sure strangers cant see the leads",
+        "anyone with the link can sign up to my portal, i dont want that",
+        "i dont want randos reading my lead list"
+      ],
+      "nearMiss": [
+        { "prompt": "publish my app", "expect": "taskade-publish-app" },
+        { "prompt": "back up my app before I release it", "expect": "taskade-publish-app" },
+        { "prompt": "check my whole app for problems", "expect": "taskade-check-app" },
+        { "prompt": "the login page of my app shows an error", "expect": "taskade-fix-app" },
+        { "prompt": "how do i turn on two factor login for my taskade account", "expect": "taskade" },
+        { "prompt": "change my wifi password", "expect": "none" }
+      ]
+    },
+    "taskade-publish-app": {
+      "must": [
+        "publish my app",
+        "release a new version of my kit",
+        "back up my app",
+        "export my app",
+        "save a copy before I change it",
+        "undo my last change",
+        "push the fix live, safely",
+        "how do i roll back my app if the update breaks it",
+        "make the new version live",
+        "take a snapshot of the app before you edit anything",
+        "my kit buyers should get the new features"
+      ],
+      "nearMiss": [
+        { "prompt": "who can open my app once it is live", "expect": "taskade-secure-app" },
+        { "prompt": "make my app private before publishing", "expect": "taskade-secure-app" },
+        { "prompt": "fix the bug on the pricing page and then publish", "expect": "taskade-fix-app" },
+        { "prompt": "copy a kit from the taskade gallery into my workspace", "expect": "taskade-clone-kit" },
+        { "prompt": "publish my blog post on wordpress", "expect": "none" }
+      ]
+    },
+    "taskade-report": {
+      "must": [
+        "weekly report pls",
+        "status of my taskade workspace",
+        "how is my pipeline",
+        "whats overdue",
+        "are my automations working",
+        "summarize my projects",
+        "how many invoices are still unpaid this month",
+        "give me a one page update on our projects that i can send my boss",
+        "what needs my attention today",
+        "did any automation break overnight"
+      ],
+      "nearMiss": [
+        { "prompt": "check my app for problems", "expect": "taskade-check-app" },
+        { "prompt": "show my tasks as a calendar", "expect": "taskade" },
+        { "prompt": "import my sales figures from sales.csv", "expect": "taskade-spreadsheet-to-app" },
+        { "prompt": "write my meeting notes as a markdown checklist i can paste into taskade", "expect": "taskade-markdown" },
+        { "prompt": "write a quarterly report for investors about the market", "expect": "none" }
+      ]
+    },
+    "taskade-markdown": {
+      "must": [
+        "write me a launch checklist for taskade",
+        "make a markdown outline I can import into Taskade",
+        "move my notion notes into taskade",
+        "which markdown does taskade keep when I paste",
+        "give me a csv i can upload to taskade for my wedding tasks",
+        "how do I get my apple notes into taskade",
+        "draft a packing list I can paste into taskade",
+        "i dont have taskade yet, but write my project plan so I can import it later",
+        "does taskade keep tables when i paste them"
+      ],
+      "nearMiss": [
+        { "prompt": "import these 200 rows into my existing leads project, skip duplicates", "expect": "taskade-spreadsheet-to-app" },
+        { "prompt": "put the roadmap.md and the TODO comments of this repo into taskade and keep it in sync", "expect": "taskade-repo-to-project" },
+        { "prompt": "write a status report of my workspace", "expect": "taskade-report" },
+        { "prompt": "build me an app to plan my wedding", "expect": "taskade-build-app" },
+        { "prompt": "export my launch project from taskade as a markdown file", "expect": "taskade" },
+        { "prompt": "write a README in markdown for my npm package", "expect": "none" }
+      ]
+    },
+    "taskade-repo-to-project": {
+      "must": [
+        "put this repo's roadmap in taskade",
+        "turn the TODOs into tasks",
+        "sync my github issues to a taskade project",
+        "make a taskade project from this PRD",
+        "update the taskade project from the repo",
+        "whats left to do in this codebase, put it where the PM can see it",
+        "grab all the FIXMEs and make tasks out of them",
+        "mirror the open issues of our gh repo in taskade, no dupes",
+        "our spec is in docs/spec.md, can the team track it in taskade"
+      ],
+      "nearMiss": [
+        { "prompt": "write a markdown checklist for my move that taskade can import", "expect": "taskade-markdown" },
+        { "prompt": "import bugs.csv into my bug tracker project", "expect": "taskade-spreadsheet-to-app" },
+        { "prompt": "weekly status of the dev project in taskade", "expect": "taskade-report" },
+        { "prompt": "build a bug tracker app for my team", "expect": "taskade-build-app" },
+        { "prompt": "fix the TODO in utils.ts", "expect": "none" }
+      ]
+    }
+  }
+}

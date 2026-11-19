@@ -50,8 +50,22 @@ Run `node scripts/check.mjs --base origin/main` before you open a pull request. 
 - A request link uses only `https://www.taskade.com/create?prompt=`.
 - The README lists each skill.
 - On a pull request: a change in `plugins/taskade/` comes with a new plugin version.
+- The rules of `scripts/check-triggers.mjs` (see "Trigger tests" below).
 
 `node scripts/check.mjs --self-test` breaks a copy of the repository in one way for each case. Then it makes sure that the check fails. It does not have a case for each rule yet. Add a case there when you add or change a rule.
+
+## Trigger tests
+
+An agent client picks a skill from its `name` and `description` alone. `tests/triggers.json` holds the trigger test set. For each skill, it has at least 8 prompts that must select the skill, and at least 4 near-miss prompts that must select another skill or no Taskade skill. `tests/TRIGGERS.md` records the skill that a client picks for each prompt.
+
+`node scripts/check-triggers.mjs` checks these things. `node scripts/check.mjs` runs it too.
+
+- Each `name` has at most 64 characters, and each `description` at most 1024.
+- Each `description` passes the YAML rule of `check.mjs`, and says when to use the skill ("Use when ...").
+- The test set has an entry for each skill, with enough prompts, and names only skills that exist. A prompt does not expect two different skills.
+- Two descriptions whose content words overlap at 0.14 or above are a collision. A collision passes only when one description names the other skill, and the test set has a near-miss prompt in each direction. `--overlap` prints the value of each pair.
+
+The script cannot judge which skill a client picks. When you change a description, read only the names and the descriptions, pick a skill for each prompt, and update `tests/TRIGGERS.md`. A miss is a defect only when the description is at fault. A prompt that passed before must still pass. `node scripts/check-triggers.mjs --self-test` breaks a copy in one way for each rule.
 
 `./scripts/sync-mcp.sh --self-test` syncs into made-up copies of taskade/mcp. It makes sure that the script refuses an older version and a checkout with changes that are not committed, and that a failed check changes no file.
 

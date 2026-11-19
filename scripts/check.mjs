@@ -5,6 +5,8 @@
 //   node scripts/check.mjs --base origin/main also the version rule against that ref
 //   node scripts/check.mjs --mcp ../mcp       report the difference from a taskade/mcp checkout
 //   node scripts/check.mjs --self-test        break a copy in one way for each case
+//
+// Without --mcp and --self-test, the check also runs scripts/check-triggers.mjs.
 
 import { execFileSync } from 'node:child_process';
 import {
@@ -22,8 +24,8 @@ import { tmpdir } from 'node:os';
 import { basename, dirname, extname, join, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-const REPO_ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
-const PLUGIN = 'plugins/taskade';
+export const REPO_ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
+export const PLUGIN = 'plugins/taskade';
 
 // Each file that carries the plugin version.
 const VERSION_FILES = [
@@ -65,8 +67,8 @@ const REFUSED_FILE_NAMES = new Set([
 ]);
 
 const NAME_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
-const NAME_LIMIT = 64;
-const DESCRIPTION_LIMIT = 1024;
+export const NAME_LIMIT = 64;
+export const DESCRIPTION_LIMIT = 1024;
 
 // Text that must not be in a public file.
 const TEXT_RULES = [{ pattern: /—/, message: 'em dash (use a period or a comma)' }];
@@ -94,7 +96,7 @@ function versionOf(file, json) {
 
 // Reads the `name` and `description` of a SKILL.md. Each value must be on one line.
 // `hasContinuation` is true when an indented line continues a value.
-function frontmatterOf(text) {
+export function frontmatterOf(text) {
   const match = /^---\n([\s\S]*?)\n---\n/.exec(text.replace(/\r\n/g, '\n'));
   if (match == null) {
     return null;
@@ -136,6 +138,13 @@ function promptUrlProblems(text) {
     .map(({ url, param }) => `${url}${param}`);
 }
 
+// A YAML parser reads ": " or " #" in a value with no quotes as a new key or a comment, and
+// then skips the skill. Some installers use such a parser. `text` is the whole SKILL.md.
+export function hasYamlBreak(text) {
+  const rawDescription = /^description:[ \t]*(.*)$/m.exec(text.replace(/\r\n/g, '\n'))?.[1] ?? '';
+  return !/^["']/.test(rawDescription) && /: | #|:$/.test(rawDescription);
+}
+
 function checkPluginFiles(root) {
   return walk(join(root, PLUGIN)).flatMap((entry) => {
     const name = basename(entry.path);
@@ -161,7 +170,7 @@ function checkPluginFiles(root) {
   });
 }
 
-function skillNames(root) {
+export function skillNames(root) {
   const skillsDir = join(root, PLUGIN, 'skills');
   return readdirSync(skillsDir)
     .sort()
@@ -206,10 +215,7 @@ function checkSkills(root) {
     if (description === '') {
       problems.push(`${label}: description is empty`);
     }
-    // A YAML parser reads ": " or " #" in a value with no quotes as a new key or a comment, and
-    // then skips the skill. Some installers use such a parser.
-    const rawDescription = /^description:[ \t]*(.*)$/m.exec(text.replace(/\r\n/g, '\n'))?.[1] ?? '';
-    if (!/^["']/.test(rawDescription) && /: | #|:$/.test(rawDescription)) {
+    if (hasYamlBreak(text)) {
       problems.push(
         `${label}: the description has ": " or " #", which a YAML parser cannot read (reword it)`,
       );
@@ -766,7 +772,7 @@ function selfTestArgs() {
   });
 }
 
-function main() {
+async function main() {
   const options = parseArgs(process.argv.slice(2));
   if (options.error != null) {
     console.error(options.error);
@@ -791,9 +797,12 @@ function main() {
   }
 
   const base = options.base;
+  // Imported here, after this module has run, because check-triggers.mjs imports this module.
+  const { checkTriggers } = await import('./check-triggers.mjs');
   const problems = [
     ...checkAll(REPO_ROOT),
     ...(base != null ? checkVersionAgainst(REPO_ROOT, base) : []),
+    ...checkTriggers(REPO_ROOT).problems,
   ];
   if (problems.length > 0) {
     console.error(
@@ -806,4 +815,11 @@ function main() {
   );
 }
 
-main();
+// Runs only when this file is the command, not when another script imports it.
+if (process.argv[1] != null && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+  // No top-level await: main() imports check-triggers.mjs, which imports this module.
+  main().catch((error) => {
+    console.error(error);
+    process.exit(1);
+  });
+}

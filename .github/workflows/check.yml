@@ -27,6 +27,9 @@ jobs:
       - name: Run the self-test
         run: node scripts/check.mjs --self-test
 
+      - name: Run the self-test of the trigger check
+        run: node scripts/check-triggers.mjs --self-test
+
       - name: Run the self-test of the sync script
         run: ./scripts/sync-mcp.sh --self-test
 

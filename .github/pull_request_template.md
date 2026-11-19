@@ -5,6 +5,7 @@
 ## Checks
 
 - [ ] `node scripts/check.mjs --base origin/main` passes
+- [ ] A changed `description` comes with a new judgment of each prompt in `tests/TRIGGERS.md`
 - [ ] A change in `plugins/taskade/` comes with a new plugin version (`./scripts/bump.sh patch`, or `minor` for a new skill)
 - [ ] Each statement about Taskade is checked in the product
 - [ ] No count that changes with each release, and no em dash

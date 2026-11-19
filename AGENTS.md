@@ -25,5 +25,6 @@ npx skills add taskade/skills                                                   
 - Read [CONTRIBUTING.md](CONTRIBUTING.md) before you write. It has the rules for a skill and the writing rules.
 - State only what Taskade does today. Do not add a tool name that the Taskade MCP server does not list.
 - The plugin folder holds only Markdown, JSON, YAML, text and image files.
-- Run `node scripts/check.mjs --base origin/main` before you open a pull request.
+- Run `node scripts/check.mjs --base origin/main` before you open a pull request. It also runs `scripts/check-triggers.mjs`.
+- When you change a `description`, judge each prompt in `tests/triggers.json` again, and update `tests/TRIGGERS.md`. A prompt that passed before must still pass.
 - A change in `plugins/taskade/` needs a new plugin version: `./scripts/bump.sh patch`, or `./scripts/bump.sh minor` for a new skill.
