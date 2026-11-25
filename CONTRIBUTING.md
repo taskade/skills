@@ -13,6 +13,7 @@ plugins/taskade/              the plugin, and the only copy of each skill
 .claude-plugin/               marketplace file for Claude Code
 .cursor-plugin/               marketplace file for Cursor
 .agents/plugins/              marketplace file for Codex
+hosted-tools.json             snapshot of the tool list of the hosted server
 ```
 
 Edit a skill in `plugins/taskade/skills/` only. Do not add a second copy in another folder.
@@ -51,6 +52,7 @@ Run `node scripts/check.mjs --base origin/main` before you open a pull request. 
 - The plugin version is the same in each manifest, and each marketplace file points at `./plugins/taskade`.
 - A request link uses only `https://www.taskade.com/create?prompt=`.
 - The README lists each skill.
+- Each snake_case word in backticks in a skill, such as `list_spaces`, is a tool in `hosted-tools.json`, or a word in `NOT_TOOL_NAMES` of `scripts/check.mjs`. The check prints the file and the unknown name.
 - On a pull request: a change in `plugins/taskade/` comes with a new plugin version.
 - The rules of `scripts/check-triggers.mjs` (see "Trigger tests" below).
 
@@ -70,6 +72,16 @@ An agent client picks a skill from its `name` and `description` alone. `tests/tr
 The script cannot judge which skill a client picks. When you change a description, read only the names and the descriptions, pick a skill for each prompt, and update `tests/TRIGGERS.md`. A miss is a defect only when the description is at fault. A prompt that passed before must still pass. `node scripts/check-triggers.mjs --self-test` breaks a copy in one way for each rule.
 
 `./scripts/sync-mcp.sh --self-test` syncs into made-up copies of taskade/mcp. It makes sure that the script refuses an older version and a checkout with changes that are not committed, and that a failed check changes no file.
+
+## Hosted tool list
+
+`hosted-tools.json` is a snapshot of the tool list of the hosted server `https://www.taskade.com/mcp`. It holds each tool name, and the title and the read or write mark when they are known. The check uses the snapshot and no network.
+
+- `node scripts/hosted-tools.mjs sync` fetches the public tool list file `https://www.taskade.com/.well-known/mcp/tools.json` and writes the snapshot. When the file does not answer 200 with the expected shape, the script changes nothing.
+- Until that file is available, edit the snapshot by hand: keep the tools sorted by name, and set `count` to the number of tools. Then run `node scripts/check.mjs`.
+- When a tool of the hosted server gets a new name, update the snapshot first. Then the check names each skill that cites the old name.
+
+`node scripts/hosted-tools.mjs --self-test` gives the reader a bad list for each case. `sync-mcp.sh` does not copy the snapshot or the script, because taskade/mcp keeps its own snapshot.
 
 ## Versions and releases
 
