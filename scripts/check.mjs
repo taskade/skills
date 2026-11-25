@@ -24,6 +24,8 @@ import { tmpdir } from 'node:os';
 import { basename, dirname, extname, join, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import { HOSTED_TOOLS, readSnapshot } from './hosted-tools.mjs';
+
 export const REPO_ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 export const PLUGIN = 'plugins/taskade';
 
@@ -86,6 +88,19 @@ export const START_BLOCK = [
 ].join('\n');
 // The front door holds the full setup. taskade-markdown works with no connection.
 const START_BLOCK_EXEMPT = new Set(['taskade', 'taskade-markdown']);
+
+// A skill cites a tool of the hosted server as a snake_case word in backticks, for example
+// `list_spaces`. These snake_case words in backticks are not tool names: the `str_replace`
+// command of `write_file`, and the codes of a refusal. Add a word here only when it is not a tool.
+const NOT_TOOL_NAMES = new Set([
+  'field_not_editable',
+  'plan_required',
+  'str_replace',
+  'switch_refused',
+  'trigger_input_enabled',
+  'updated_at_required',
+]);
+const TOOL_CITATION = /`([a-z][a-z0-9]*(?:_[a-z0-9]+)+)`/g;
 
 // macOS writes .DS_Store files. The .gitignore keeps them out of git, so the walk leaves them out.
 function walk(dir, prefix = '') {
@@ -304,6 +319,29 @@ function checkReferenceCopies(root) {
   });
 }
 
+// Each tool that a skill cites must be in hosted-tools.json.
+function checkToolNames(root) {
+  let snapshot;
+  try {
+    snapshot = readSnapshot(root);
+  } catch (error) {
+    return [`${HOSTED_TOOLS}: ${error.message}`];
+  }
+  const tools = new Set(snapshot.tools.map((tool) => tool.name));
+  return walk(join(root, PLUGIN, 'skills'))
+    .filter((entry) => !entry.isDirectory && extname(entry.path).toLowerCase() === '.md')
+    .flatMap((entry) => {
+      const text = readFileSync(join(root, PLUGIN, 'skills', entry.path), 'utf8');
+      const names = new Set([...text.matchAll(TOOL_CITATION)].map((match) => match[1]));
+      return [...names]
+        .filter((name) => !tools.has(name) && !NOT_TOOL_NAMES.has(name))
+        .map(
+          (name) =>
+            `${PLUGIN}/skills/${entry.path}: \`${name}\` is not a tool in ${HOSTED_TOOLS}. Correct the name, or add it to NOT_TOOL_NAMES in scripts/check.mjs when it is not a tool.`,
+        );
+    });
+}
+
 function checkManifests(root) {
   const problems = [];
   const versions = VERSION_FILES.map((file) => {
@@ -382,6 +420,7 @@ function checkAll(root) {
     ...checkPluginFiles(root),
     ...checkSkills(root),
     ...checkReferenceCopies(root),
+    ...checkToolNames(root),
     ...checkManifests(root),
     ...checkText(root),
     ...checkReadme(root),
@@ -779,6 +818,32 @@ const SELF_TEST = [
     expect: 'is not equal to the copy in',
   },
   {
+    name: 'a skill that cites a tool that the hosted server does not have',
+    change: (root) =>
+      edit(root, `${PLUGIN}/skills/taskade-report/SKILL.md`, /$/, '\nCall `list_everything`.\n'),
+    expect: 'taskade-report/SKILL.md: `list_everything` is not a tool in hosted-tools.json',
+  },
+  {
+    name: 'a reference file that cites a tool that the hosted server does not have',
+    change: (root) =>
+      edit(
+        root,
+        `${PLUGIN}/skills/taskade-clone-kit/references/sample-rows.md`,
+        /$/,
+        '\nThen call `delete_space`.\n',
+      ),
+    expect: 'references/sample-rows.md: `delete_space` is not a tool',
+  },
+  {
+    name: 'a snapshot that is not sorted',
+    change: (root) => {
+      const snapshot = JSON.parse(readFileSync(join(root, HOSTED_TOOLS), 'utf8'));
+      snapshot.tools.reverse();
+      writeFileSync(join(root, HOSTED_TOOLS), `${JSON.stringify(snapshot, null, 2)}\n`);
+    },
+    expect: 'sorted by name',
+  },
+  {
     name: 'a skill that the README does not list',
     change: (root) => {
       cpSync(join(root, PLUGIN, 'skills/taskade-report'), join(root, PLUGIN, 'skills/new-skill'), {
@@ -811,6 +876,7 @@ function selfTest() {
         '.agents',
         'README.md',
         'CONTRIBUTING.md',
+        HOSTED_TOOLS,
       ]) {
         cpSync(join(REPO_ROOT, item), join(root, item), { recursive: true });
       }

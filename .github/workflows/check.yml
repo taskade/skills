@@ -33,6 +33,9 @@ jobs:
       - name: Run the self-test of the sync script
         run: ./scripts/sync-mcp.sh --self-test
 
+      - name: Run the self-test of the hosted tool list reader
+        run: node scripts/hosted-tools.mjs --self-test
+
       - name: Check the plugin folder, the skills and the manifests
         if: github.event_name != 'pull_request'
         run: node scripts/check.mjs
