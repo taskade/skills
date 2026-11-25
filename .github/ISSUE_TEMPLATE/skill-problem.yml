@@ -15,6 +15,7 @@ body:
         - taskade-check-app
         - taskade-fix-first-screen
         - taskade-secure-app
+        - taskade-fix-flows
         - taskade-clone-kit
         - taskade-publish-app
         - taskade-build-agent

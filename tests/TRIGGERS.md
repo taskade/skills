@@ -4,7 +4,7 @@ An agent client loads a skill from its `name` and `description` alone. This file
 
 ## Method
 
-1. Read only the 13 names and descriptions, not the bodies.
+1. Read only the 14 names and descriptions, not the bodies.
 2. For each prompt, pick the one skill that a client loads, or `none` when no Taskade skill fits.
 3. Compare the pick with the expected skill. A miss is a defect only when the description is at fault, not the prompt.
 4. After a change of a description, judge every prompt again. A prompt that passed before must still pass.
@@ -19,10 +19,13 @@ A collision is a pair of descriptions whose content words overlap at 0.14 or abo
 |---|---|---|---|
 | Before the changes of version 0.6.3 | 202 | 199 | 3 |
 | After the changes of version 0.6.3 | 202 | 202 | 0 |
+| After the changes of version 0.7.0 | 231 | 231 | 0 |
 
 No prompt that passed before fails after the changes.
 
 Collisions that the check found on version 0.6.2: taskade-check-app and taskade-secure-app (0.23), taskade-fix-app and taskade-fix-first-screen (0.22), taskade-check-app and taskade-fix-app (0.16), taskade and taskade-check-app (0.15), taskade-repo-to-project and taskade-spreadsheet-to-app (0.15), taskade-clone-kit and taskade-publish-app (0.15), taskade-fix-app and taskade-secure-app (0.15), taskade-markdown and taskade-repo-to-project (0.15). Each pair names the other skill and has a near miss in each direction. No prompt between these pairs missed. On version 0.6.3 the check finds the first 6 of them. The new words lower the overlap of taskade-clone-kit and taskade-publish-app, and of taskade-markdown and taskade-repo-to-project, below the limit.
+
+On version 0.7.0 the check finds 5 collisions, all of them pairs from before: taskade-fix-app and taskade-fix-first-screen (0.22), taskade-check-app and taskade-secure-app (0.20), taskade-check-app and taskade-fix-app (0.16), taskade and taskade-check-app (0.15), taskade-repo-to-project and taskade-spreadsheet-to-app (0.15). The new skill taskade-fix-flows has no collision. Its nearest pairs are at 0.11.
 
 ## Misses and causes
 
@@ -71,6 +74,59 @@ After:
 > Write a Markdown or CSV file that Taskade turns into a clean project, and tell the user how to bring it in. Writing the file needs no Taskade account and no MCP connection. Use when the user asks for a plan, checklist, outline or task list "for Taskade", wants to move notes from another app into Taskade, or asks which Markdown Taskade keeps. For rows with duplicate checks in a project that exists, use taskade-spreadsheet-to-app. For a new app, use taskade-build-app. Not for an export of a Taskade project (the front door taskade reads it).
 
 Fixed: "export my launch project from taskade as a markdown file".
+
+## Version 0.7.0
+
+Version 0.7.0 adds the skill taskade-fix-flows and changes 3 descriptions:
+
+- taskade: the list of job skills names taskade-fix-flows (automations).
+- taskade-report: "Next jobs are taskade-fix-flows for a failed automation and taskade-fix-app for an app problem that the report shows." Before, taskade-fix-app took a failed automation.
+- taskade-secure-app: it reads who can read and write each list, and sets the sign-up of the app with a preview and the owner's yes, when the server lists the access tools. It names taskade-fix-flows for an automation.
+
+Each of the 202 prompts of version 0.6.3 was judged again against the 14 descriptions of version 0.7.0. Each keeps the pick of the table below. These prompts are near a new description and were judged with care:
+
+| Prompt | Expected | Pick | Reason |
+|---|---|---|---|
+| did any automation break overnight | taskade-report | taskade-report | A question about the state of all automations. taskade-report quotes "are my automations working". taskade-fix-flows starts from one automation that the user names. |
+| the form on my app stopped sending me the email | taskade-fix-app | taskade-fix-app | The user names the form of the app. taskade-fix-flows quotes "the email never arrived", so this pick has a risk. The body of taskade-fix-app sends a cause inside an automation to taskade-fix-flows. |
+| run my daily digest automation now | taskade | taskade | taskade-fix-flows says "Not for ... one run of an automation now (the front door taskade)". |
+| set up an automation that posts to slack every monday | taskade | taskade | taskade-fix-flows says "Not for a new automation". |
+| i copied the booking kit, swap in my business name and turn its automations on | taskade-clone-kit | taskade-clone-kit | taskade-fix-flows says "Not for ... the automations of a kit that the user just copied (taskade-clone-kit)". |
+| are my automations working | taskade-report | taskade-report | taskade-report quotes it. |
+
+The new prompts of version 0.7.0, with their picks:
+
+| Owner | Prompt | Kind | Expected | Pick |
+|---|---|---|---|---|
+| taskade | i installed the taskade plugin but you have no taskade tools | must | taskade | taskade |
+| taskade | turn off my daily digest automation | near miss | taskade-fix-flows | taskade-fix-flows |
+| taskade-secure-app | who can sign in to my client portal | must | taskade-secure-app | taskade-secure-app |
+| taskade-secure-app | set my portal to invite only | must | taskade-secure-app | taskade-secure-app |
+| taskade-secure-app | turn off open sign up on my booking app | must | taskade-secure-app | taskade-secure-app |
+| taskade-secure-app | can people with no account read my clients list | must | taskade-secure-app | taskade-secure-app |
+| taskade-secure-app | show me who has an account on my app | must | taskade-secure-app | taskade-secure-app |
+| taskade-secure-app | strangers keep signing up on my members area, stop it | must | taskade-secure-app | taskade-secure-app |
+| taskade-secure-app | which lists of my app can anyone on the internet read | must | taskade-secure-app | taskade-secure-app |
+| taskade-secure-app | my other app in the same workspace has open sign up, is my staff app still private | must | taskade-secure-app | taskade-secure-app |
+| taskade-secure-app | invite my assistant to my taskade workspace as an editor | near miss | taskade | taskade |
+| taskade-secure-app | the sign up button on my app does nothing | near miss | taskade-fix-app | taskade-fix-app |
+| taskade-secure-app | my new lead automation emails strangers, turn it off | near miss | taskade-fix-flows | taskade-fix-flows |
+| taskade-secure-app | publish my portal now that it is locked down | near miss | taskade-publish-app | taskade-publish-app |
+| taskade-fix-flows | my automation failed last night, fix it | must | taskade-fix-flows | taskade-fix-flows |
+| taskade-fix-flows | the weekly status email never arrived | must | taskade-fix-flows | taskade-fix-flows |
+| taskade-fix-flows | my lead alert automation does not run anymore | must | taskade-fix-flows | taskade-fix-flows |
+| taskade-fix-flows | turn my automation on | must | taskade-fix-flows | taskade-fix-flows |
+| taskade-fix-flows | my daily digest automation uses too many credits, make it cheaper | must | taskade-fix-flows | taskade-fix-flows |
+| taskade-fix-flows | turn off the new lead automation while i fix the form | must | taskade-fix-flows | taskade-fix-flows |
+| taskade-fix-flows | change the weekly summary automation so it emails me instead of the client | must | taskade-fix-flows | taskade-fix-flows |
+| taskade-fix-flows | why does my booking automation keep failing at the gmail step | must | taskade-fix-flows | taskade-fix-flows |
+| taskade-fix-flows | run my daily digest automation now | near miss | taskade | taskade |
+| taskade-fix-flows | are my automations working | near miss | taskade-report | taskade-report |
+| taskade-fix-flows | i copied the booking kit, swap in my business name and turn its automations on | near miss | taskade-clone-kit | taskade-clone-kit |
+| taskade-fix-flows | turn off my smart lights at 10pm | near miss | none | none |
+| taskade-fix-flows | set up an automation that posts to slack every monday | near miss | taskade | taskade |
+| taskade-fix-flows | can strangers see the bookings in my app | near miss | taskade-secure-app | taskade-secure-app |
+| taskade-report | my weekly report automation failed, fix it | near miss | taskade-fix-flows | taskade-fix-flows |
 
 ## Notes
 
