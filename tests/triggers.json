@@ -14,7 +14,8 @@
         "hook up taskade to cursor",
         "move the call the printer task to tomorrow and assign it to Sam",
         "how much does taskade cost for a team of 5",
-        "run my daily digest automation now"
+        "run my daily digest automation now",
+        "i installed the taskade plugin but you have no taskade tools"
       ],
       "nearMiss": [
         { "prompt": "check my apps and tell me what to fix first", "expect": "taskade-check-app" },
@@ -23,7 +24,8 @@
         { "prompt": "make me an agent that answers refund questions from our policy doc", "expect": "taskade-build-agent" },
         { "prompt": "publish my app", "expect": "taskade-publish-app" },
         { "prompt": "build me a booking app for my studio", "expect": "taskade-build-app" },
-        { "prompt": "whats the weather in lisbon tomorrow", "expect": "none" }
+        { "prompt": "whats the weather in lisbon tomorrow", "expect": "none" },
+        { "prompt": "turn off my daily digest automation", "expect": "taskade-fix-flows" }
       ]
     },
     "taskade-build-app": {
@@ -186,7 +188,15 @@
         "can strangers write to my private list through the public form",
         "before I publish, make sure strangers cant see the leads",
         "anyone with the link can sign up to my portal, i dont want that",
-        "i dont want randos reading my lead list"
+        "i dont want randos reading my lead list",
+        "who can sign in to my client portal",
+        "set my portal to invite only",
+        "turn off open sign up on my booking app",
+        "can people with no account read my clients list",
+        "show me who has an account on my app",
+        "strangers keep signing up on my members area, stop it",
+        "which lists of my app can anyone on the internet read",
+        "my other app in the same workspace has open sign up, is my staff app still private"
       ],
       "nearMiss": [
         { "prompt": "publish my app", "expect": "taskade-publish-app" },
@@ -194,7 +204,31 @@
         { "prompt": "check my whole app for problems", "expect": "taskade-check-app" },
         { "prompt": "the login page of my app shows an error", "expect": "taskade-fix-app" },
         { "prompt": "how do i turn on two factor login for my taskade account", "expect": "taskade" },
-        { "prompt": "change my wifi password", "expect": "none" }
+        { "prompt": "change my wifi password", "expect": "none" },
+        { "prompt": "invite my assistant to my taskade workspace as an editor", "expect": "taskade" },
+        { "prompt": "the sign up button on my app does nothing", "expect": "taskade-fix-app" },
+        { "prompt": "my new lead automation emails strangers, turn it off", "expect": "taskade-fix-flows" },
+        { "prompt": "publish my portal now that it is locked down", "expect": "taskade-publish-app" }
+      ]
+    },
+    "taskade-fix-flows": {
+      "must": [
+        "my automation failed last night, fix it",
+        "the weekly status email never arrived",
+        "my lead alert automation does not run anymore",
+        "turn my automation on",
+        "my daily digest automation uses too many credits, make it cheaper",
+        "turn off the new lead automation while i fix the form",
+        "change the weekly summary automation so it emails me instead of the client",
+        "why does my booking automation keep failing at the gmail step"
+      ],
+      "nearMiss": [
+        { "prompt": "run my daily digest automation now", "expect": "taskade" },
+        { "prompt": "are my automations working", "expect": "taskade-report" },
+        { "prompt": "i copied the booking kit, swap in my business name and turn its automations on", "expect": "taskade-clone-kit" },
+        { "prompt": "turn off my smart lights at 10pm", "expect": "none" },
+        { "prompt": "set up an automation that posts to slack every monday", "expect": "taskade" },
+        { "prompt": "can strangers see the bookings in my app", "expect": "taskade-secure-app" }
       ]
     },
     "taskade-publish-app": {
@@ -237,7 +271,8 @@
         { "prompt": "show my tasks as a calendar", "expect": "taskade" },
         { "prompt": "import my sales figures from sales.csv", "expect": "taskade-spreadsheet-to-app" },
         { "prompt": "write my meeting notes as a markdown checklist i can paste into taskade", "expect": "taskade-markdown" },
-        { "prompt": "write a quarterly report for investors about the market", "expect": "none" }
+        { "prompt": "write a quarterly report for investors about the market", "expect": "none" },
+        { "prompt": "my weekly report automation failed, fix it", "expect": "taskade-fix-flows" }
       ]
     },
     "taskade-markdown": {

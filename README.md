@@ -91,14 +91,15 @@ Find your job in the table. Ask your agent in your own words.
 
 | Group | Skill | Ask your agent | Needs a connection |
 |---|---|---|---|
-| **Start** | [taskade](plugins/taskade/skills/taskade)<br>The front door. Connects Taskade, shows what is in the workspace, and reads and changes projects, tasks, fields, AI agents and Taskade Genesis app files. Picks the project view that answers a question. Reads and runs automations | "Connect Taskade and show me what it can do"<br>"Add a task to my launch project and assign it to me"<br>"Why is my Taskade calendar empty?" | Yes, but not for view advice such as the empty calendar |
+| **Start** | [taskade](plugins/taskade/skills/taskade)<br>The front door. Connects Taskade, shows what is in the workspace, and reads and changes projects, tasks, fields, AI agents and Taskade Genesis app files. Picks the project view that answers a question. Reads, runs and turns automations on or off | "Connect Taskade and show me what it can do"<br>"Add a task to my launch project and assign it to me"<br>"Why is my Taskade calendar empty?" | Yes, but not for view advice such as the empty calendar |
 | **Build** | [taskade-build-app](plugins/taskade/skills/taskade-build-app)<br>Plans a new Taskade Genesis app, writes the build request for Taskade EVE with a link that fills it in, and checks the build against the plan | "Build a client portal app for my agency in Taskade" | Only for the check after the build |
 | | [taskade-clone-kit](plugins/taskade/skills/taskade-clone-kit)<br>Copies an app kit and makes it yours in 3 steps: your name and look, your data, your automations on | "Clone this app kit and make it mine" | Yes |
 | | [taskade-build-agent](plugins/taskade/skills/taskade-build-agent)<br>Creates or tunes an AI agent in your workspace: instructions that you approve, the projects and files that it must know, and a few test questions with each answer shown | "Make an agent that answers my clients from my price list, and test it" | Yes |
 | **Fix and check** | [taskade-check-app](plugins/taskade/skills/taskade-check-app)<br>Checks the pages, lists and automations of your apps, each as pass, fail or not checked, with the fix. Changes nothing | "Check my Taskade apps and tell me what to fix first" | Yes |
 | | [taskade-fix-app](plugins/taskade/skills/taskade-fix-app)<br>Fixes a problem in a Taskade Genesis app, one checked change at a time, and proves it for a visitor, the owner and a signed-in member | "My Taskade app shows a blank page after login. Fix it and show me what changed" | Yes |
 | | [taskade-fix-first-screen](plugins/taskade/skills/taskade-fix-first-screen)<br>Makes the first screen show the result at once on a phone, with one first action that saves with 0 AI credits and marked sample rows | "My app looks generic on a phone. Make the first screen show the result" | Yes |
-| **Share safely** | [taskade-secure-app](plugins/taskade/skills/taskade-secure-app)<br>Checks who can sign in and which lists are private, names the 2 settings to confirm in Taskade, and looks in the app code for a visitor's write to a private list | "Is my client portal safe to share? Clients must not see each other" | Yes |
+| | [taskade-fix-flows](plugins/taskade/skills/taskade-fix-flows)<br>Finds automations that are off, incomplete or failing, changes a step setting or turns one on or off with a preview and your yes, and gives the way back | "My weekly status automation stopped. Fix it" | Yes |
+| **Share safely** | [taskade-secure-app](plugins/taskade/skills/taskade-secure-app)<br>Checks who can sign in and which lists are private, reads who can use each list, sets the sign-up with your yes (or names the 2 settings to confirm in Taskade), and looks in the app code for a visitor's write to a private list | "Is my client portal safe to share? Clients must not see each other" | Yes |
 | | [taskade-publish-app](plugins/taskade/skills/taskade-publish-app)<br>Backs up an app, walks you through Publish in Taskade, publishes a kit version, and names the way back | "Publish my app with a backup and a way back" | Yes |
 | **Data in and out** | [taskade-spreadsheet-to-app](plugins/taskade/skills/taskade-spreadsheet-to-app)<br>Turns a CSV or Excel file into a project or app: adds the missing columns, writes sample rows first and the real rows after a yes, and skips duplicates | "Turn this spreadsheet of leads into my Taskade CRM and skip duplicates" | Yes |
 | | [taskade-markdown](plugins/taskade/skills/taskade-markdown)<br>Writes a Markdown or CSV file that Taskade imports as a clean project. Works with no connection | "Write my launch notes as a Markdown file that Taskade can import" | No |
@@ -132,7 +133,7 @@ flowchart LR
 
 ## What you do in Taskade
 
-Taskade EVE builds an app and creates or edits an automation inside Taskade. The skills write the request for Taskade EVE, and you start it. You publish an app, choose who can use it, turn an automation On or Off, and connect a domain in Taskade.
+Taskade EVE builds an app, creates an automation, and adds or removes its steps inside Taskade. The skills write the request for Taskade EVE, and you start it. You publish an app, choose who can use it, turn an automation On or Off (or let the skills do it with your yes), and connect a domain in Taskade.
 
 ## Links
 

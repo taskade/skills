@@ -73,6 +73,20 @@ export const DESCRIPTION_LIMIT = 1024;
 // Text that must not be in a public file.
 const TEXT_RULES = [{ pattern: /—/, message: 'em dash (use a period or a comma)' }];
 
+// The "Before you start" block. Each job skill that calls a Taskade tool holds it once, byte for
+// byte, so that a skill installed alone can connect. Change it here and in each skill.
+export const START_BLOCK = [
+  '## Before you start',
+  '',
+  '- If Taskade tools are in your tool list, skip this section. If your client loads tools on demand, search the list first.',
+  '- If the Taskade plugin is installed or your client has a Taskade server, and no Taskade tools show, ask the user to sign in to that server. Do not add a second server. Only with no Taskade server at all, connect `https://www.taskade.com/mcp` before the first step that calls a Taskade tool. Follow "Connect" in `https://www.taskade.com/SKILL.md`, or in the taskade skill when it is installed.',
+  '- MCP access is part of every paid Taskade plan, not Free. A workspace on the Free plan does not appear in `list_spaces`. If the response has `hiddenForPlan` and a `hint`, show the hint to the user. The hint holds the link to the plans.',
+  '- If a later call fails with a plan error, link `https://www.taskade.com/pricing`. If the user cannot connect, do only the steps that need no Taskade tool, and name the steps that are left.',
+  '',
+].join('\n');
+// The front door holds the full setup. taskade-markdown works with no connection.
+const START_BLOCK_EXEMPT = new Set(['taskade', 'taskade-markdown']);
+
 // macOS writes .DS_Store files. The .gitignore keeps them out of git, so the walk leaves them out.
 function walk(dir, prefix = '') {
   return readdirSync(dir)
@@ -180,13 +194,6 @@ export function skillNames(root) {
 function checkSkills(root) {
   const skillsDir = join(root, PLUGIN, 'skills');
   const names = skillNames(root);
-  const referenceFiles = new Set(
-    names.flatMap((name) =>
-      existsSync(join(skillsDir, name, 'references'))
-        ? readdirSync(join(skillsDir, name, 'references')).map((file) => `references/${file}`)
-        : [],
-    ),
-  );
   const problems = names.length === 0 ? [`${PLUGIN}/skills: no skill found`] : [];
 
   for (const name of names) {
@@ -225,21 +232,51 @@ function checkSkills(root) {
         `${label}: description has ${description.length} characters, the limit is ${DESCRIPTION_LIMIT}`,
       );
     }
+    const copies = text.replace(/\r\n/g, '\n').split(START_BLOCK).length - 1;
+    if (!START_BLOCK_EXEMPT.has(name) && copies !== 1) {
+      problems.push(
+        `${label}: the "Before you start" block must be in the skill once, equal to START_BLOCK in scripts/check.mjs (found ${copies})`,
+      );
+    }
     for (const match of text.matchAll(/`(references\/[^`\s]+)`/g)) {
-      if (!referenceFiles.has(match[1])) {
-        problems.push(`${label}: ${match[1]} does not exist in any skill`);
+      if (!existsSync(join(skillsDir, name, match[1]))) {
+        problems.push(`${label}: ${match[1]} is not in the folder of this skill`);
       }
     }
     for (const match of withoutCode(text).matchAll(/\]\((?!https?:|#|mailto:)([^)\s]+)\)/g)) {
       const target = resolve(skillsDir, name, match[1].replace(/#.*$/, ''));
-      if (!target.startsWith(resolve(root, PLUGIN) + sep)) {
-        problems.push(`${label}: link target ${match[1]} is outside the plugin folder`);
+      if (!target.startsWith(resolve(skillsDir, name) + sep)) {
+        problems.push(`${label}: link target ${match[1]} is outside the folder of this skill`);
       } else if (!existsSync(target)) {
         problems.push(`${label}: link target ${match[1]} does not exist`);
       }
     }
   }
   return problems;
+}
+
+// Copies of one reference file in two or more skills must stay equal byte for byte.
+function checkReferenceCopies(root) {
+  const skillsDir = join(root, PLUGIN, 'skills');
+  const byFile = new Map();
+  for (const name of skillNames(root)) {
+    const dir = join(skillsDir, name, 'references');
+    if (!existsSync(dir)) {
+      continue;
+    }
+    for (const file of readdirSync(dir).filter((item) => item !== '.DS_Store')) {
+      byFile.set(file, [...(byFile.get(file) ?? []), name]);
+    }
+  }
+  return [...byFile].flatMap(([file, names]) => {
+    const read = (name) => readFileSync(join(skillsDir, name, 'references', file));
+    const differ = names.slice(1).filter((name) => !read(name).equals(read(names[0])));
+    return differ.length === 0
+      ? []
+      : [
+          `${PLUGIN}/skills/*/references/${file}: the copy in ${differ.join(', ')} is not equal to the copy in ${names[0]}`,
+        ];
+  });
 }
 
 function checkManifests(root) {
@@ -319,6 +356,7 @@ function checkAll(root) {
   return [
     ...checkPluginFiles(root),
     ...checkSkills(root),
+    ...checkReferenceCopies(root),
     ...checkManifests(root),
     ...checkText(root),
     ...checkReadme(root),
@@ -450,7 +488,7 @@ const SELF_TEST = [
     name: 'a reference file that does not exist',
     change: (root) =>
       edit(root, `${PLUGIN}/skills/taskade/SKILL.md`, /$/, '\nRead `references/none.md`.\n'),
-    expect: 'does not exist in any skill',
+    expect: 'is not in the folder of this skill',
   },
   {
     name: 'a link target that does not exist',
@@ -473,7 +511,7 @@ const SELF_TEST = [
     name: 'a link target outside the plugin folder',
     change: (root) =>
       edit(root, `${PLUGIN}/skills/taskade/SKILL.md`, /$/, '\nRead [it](../../../../README.md).\n'),
-    expect: 'is outside the plugin folder',
+    expect: 'is outside the folder of this skill',
   },
   {
     name: 'a description with a colon and a space',
@@ -599,6 +637,66 @@ const SELF_TEST = [
     name: 'an em dash',
     change: (root) => edit(root, 'README.md', /$/, '\nOne — two.\n'),
     expect: 'em dash',
+  },
+  {
+    name: 'a job skill with no start block',
+    change: (root) => edit(root, `${PLUGIN}/skills/taskade-report/SKILL.md`, START_BLOCK, ''),
+    expect: '"Before you start" block',
+  },
+  {
+    name: 'a changed start block',
+    change: (root) =>
+      edit(root, `${PLUGIN}/skills/taskade-report/SKILL.md`, 'skip this section', 'skip it'),
+    expect: '"Before you start" block',
+  },
+  {
+    name: 'a start block that is in a job skill two times',
+    change: (root) => edit(root, `${PLUGIN}/skills/taskade-report/SKILL.md`, /$/, `\n${START_BLOCK}`),
+    expect: '(found 2)',
+  },
+  {
+    name: 'a new job skill with no start block',
+    change: (root) => {
+      cpSync(join(root, PLUGIN, 'skills/taskade-report'), join(root, PLUGIN, 'skills/new-skill'), {
+        recursive: true,
+      });
+      edit(root, `${PLUGIN}/skills/new-skill/SKILL.md`, /^name: taskade-report$/m, 'name: new-skill');
+      edit(root, `${PLUGIN}/skills/new-skill/SKILL.md`, START_BLOCK, '');
+    },
+    expect: 'new-skill/SKILL.md: the "Before you start" block',
+  },
+  {
+    name: 'a reference file in another skill',
+    change: (root) =>
+      edit(
+        root,
+        `${PLUGIN}/skills/taskade-report/SKILL.md`,
+        /$/,
+        '\nRead `references/sample-rows.md`.\n',
+      ),
+    expect: 'is not in the folder of this skill',
+  },
+  {
+    name: 'a link into another skill folder',
+    change: (root) =>
+      edit(
+        root,
+        `${PLUGIN}/skills/taskade-report/SKILL.md`,
+        /$/,
+        '\nRead [rows](../taskade-build-app/references/sample-rows.md).\n',
+      ),
+    expect: 'outside the folder of this skill',
+  },
+  {
+    name: 'two copies of a reference file that differ',
+    change: (root) =>
+      edit(
+        root,
+        `${PLUGIN}/skills/taskade-clone-kit/references/sample-rows.md`,
+        /$/,
+        '\nOne more line.\n',
+      ),
+    expect: 'is not equal to the copy in',
   },
   {
     name: 'a skill that the README does not list',

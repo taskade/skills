@@ -43,7 +43,9 @@ Run `node scripts/check.mjs --base origin/main` before you open a pull request. 
 
 - Each skill has frontmatter, and its `name` is equal to the folder name.
 - Each `description` is one line with no `: ` and no ` #`. A YAML parser reads them as a new key or a comment, and some installers then skip the skill.
-- Each relative link in a skill points at a file that exists.
+- Each relative link and each `references/` name in a skill points at a file in the folder of that skill.
+- Each job skill holds the "Before you start" block of `scripts/check.mjs` once, byte for byte. The front door `taskade` and `taskade-markdown` do not need it.
+- Copies of one reference file in two or more skills are equal byte for byte.
 - No public text file has an em dash.
 - The plugin folder holds only the file types that a plugin directory accepts.
 - The plugin version is the same in each manifest, and each marketplace file points at `./plugins/taskade`.
