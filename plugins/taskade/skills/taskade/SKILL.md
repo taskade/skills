@@ -28,18 +28,13 @@ Three parties change a workspace. Send each job to the right one.
 
 | Job | Who does it |
 |---|---|
-| Read the workspace. Change projects, tasks, fields, agents and app files. Make a project that opens in a view. Run an automation that is On and starts "When asked". Publish a new version of your app kit. When the server lists the tools below: turn an automation On or Off, change a setting of its steps, read who can use each list of an app, and set the sign-up of an app for the workspace owner. | You, through MCP |
+| Read the workspace. Change projects, tasks, fields, agents and app files. Make a project that opens in a view. Run an automation that is On and starts "When asked". Publish a new version of your app kit. When the server lists the tools: turn an automation On or Off, change a setting of its steps, read who can use each list of an app, and set the sign-up of an app for the workspace owner. | You, through MCP |
 | Build a new app. Add a page, a list, an agent or an automation to an app. Add or remove a step of an automation, or change how it starts. Give an agent integration tools, make it public, or build an agent team (Pro and up). Run one action in a connected app. | Taskade EVE, the AI builder inside Taskade. You write the request (see "Hand off to Taskade EVE") |
 | Publish an app with the Publish button. Choose who can open the app and who can use each list, in the Publish menu. Set the sign-up of an app when the server does not list `app_users`. Connect the account that an automation needs. Turn an automation On or Off when the server does not list `switch_automation`. Connect a domain. Clone an app kit. | The owner, in the Taskade app |
 
 `prompt_agent` talks to the agents of a workspace. Taskade EVE works inside Taskade: you write the request, and the user starts it there. The owner picks who can open an app in the Publish menu ("Who can open it", or "Who can open it after you publish" before the first publish), and Taskade EVE can propose the setting. A `write_file` change to a live app can go live at once (see "Rules").
 
-When the server lists the tools below, you also do these jobs through MCP. A change call without `confirm: true` changes nothing: it returns a preview, or names the part to finish in Taskade. Show it to the user, and send `confirm: true` only after the owner's yes (see taskade-fix-flows and taskade-secure-app).
-
-- `switch_automation`: turn an automation On or Off. A turn on also sends the `automation.updatedAt` of its preview. An automation that is incomplete, or that needs another plan, is refused with the part to finish.
-- `edit_automation`: read the steps of an automation, and change the value of a text, number, date or fixed-choice field that the read marks `editable: true`. It does not change a link, a header, a secret or a connection, add or remove a step, or pick a different start. A new automation is a job for Taskade EVE.
-- `app_access`: read who can read, add and change each list of an app. It only reads. The owner changes a list setting in the Publish menu.
-- `app_users`: for the workspace owner, read the accounts of an app and set its sign-up to open or by invitation.
+When the server lists `switch_automation`, `edit_automation`, `app_access` and `app_users`, follow taskade-fix-flows for automations and taskade-secure-app for access and sign-up. Each change call previews first and needs the owner's yes.
 
 ## Connect
 
@@ -52,9 +47,9 @@ If the Taskade plugin is installed, or your client already has a Taskade server,
 - Claude Code: `claude mcp add --transport http taskade https://www.taskade.com/mcp`, then run `/mcp` and sign in.
 - Codex: `codex mcp add taskade --url https://www.taskade.com/mcp`, then `codex mcp login taskade`.
 - Full plugin (this file plus the job skills): `claude plugin marketplace add taskade/skills`, then `claude plugin install taskade@taskade-skills`.
-- A chat app (Claude, Cursor or ChatGPT): you cannot add the server yourself. Give the user the steps below in your own short words. Wait until the user says that the connection is made, then call `list_spaces`.
-  - Claude (web, desktop or mobile): open `https://claude.ai/directory/taskade-ai` and press Connect. If the page does not open, go to Settings, then Connectors, then "Add custom connector", and paste `https://www.taskade.com/mcp`. Then sign in to Taskade.
-  - Cursor: open `https://cursor.com/install-mcp?name=taskade&config=eyJ1cmwiOiJodHRwczovL3d3dy50YXNrYWRlLmNvbS9tY3AifQ%3D%3D` (it needs the Cursor desktop app), then sign in to Taskade.
+- A chat app (Claude, Cursor or ChatGPT): you cannot add the server yourself. Give the user the steps below in your own short words. Give these to the user as links. Do not fetch them. Wait until the user says that the connection is made, then call `list_spaces`. If no Taskade tools show then, ask the user to turn the Taskade connector on for this chat, or to open a new chat and send the same request again.
+  - Claude (web, desktop or mobile): open [the Taskade listing in the Claude directory](https://claude.ai/directory/taskade-ai) and press Connect. If the page does not open, go to Settings, then Connectors, then "Add custom connector", and paste `https://www.taskade.com/mcp`. Then sign in to Taskade.
+  - Cursor: open [the Cursor install link](https://cursor.com/install-mcp?name=taskade&config=eyJ1cmwiOiJodHRwczovL3d3dy50YXNrYWRlLmNvbS9tY3AifQ%3D%3D) (it needs the Cursor desktop app), then sign in to Taskade.
   - ChatGPT: add Taskade as a custom MCP server, app or connector in ChatGPT, with the server URL `https://www.taskade.com/mcp`, then sign in to Taskade. The ChatGPT plan of the user decides if custom connectors are available.
 - Other agents: add the URL as a remote MCP server or connector. OAuth metadata: `https://www.taskade.com/.well-known/oauth-protected-resource/mcp`.
 - No OAuth: create a personal access token at `https://www.taskade.com/settings/api` and send it as `Authorization: Bearer <token>`. Never write a token into a file that is committed.
@@ -68,7 +63,7 @@ If the setup fails, say which step failed. Then take the next path:
 - The sign-in fails (401), or the client has no OAuth: tell the user to connect Taskade again, or use a personal access token.
 - `list_spaces` has `hiddenForPlan`: show the hint. It holds the link to the plans. The workspace needs a paid plan for MCP. Then say what works on Free: the taskade-markdown skill writes a file that the user imports into Taskade on any plan, with no AI credits. A build with Taskade EVE uses AI credits, and a Free account with no credits sees a plan card before its first build.
 - The tools do not show after the sign-in, and you can run a shell command: run `npx @taskade/cli doctor`. It checks Node.js, the server, its sign-in metadata and the Taskade server in the config files of Claude Code, Cursor, Codex and VS Code. It changes nothing. It does not read the server of a plugin, so when the Taskade plugin is installed, do not add the server that it offers. It does not check the plan: a Free workspace passes it.
-- The client cannot add a server: answer from `https://www.taskade.com/llms.txt`. For a build, the Taskade EVE link below needs no MCP.
+- The user cannot connect either: answer from `https://www.taskade.com/llms.txt`. For a build, the Taskade EVE link below needs no MCP.
 
 If `list_spaces` returns no workspace and no `hiddenForPlan`, call it one more time. If the list is still empty, ask the user to check their workspaces in Taskade, and to create one if they have none. You can also offer a new build with the Taskade EVE link below.
 

@@ -78,8 +78,8 @@ const TEXT_RULES = [{ pattern: /—/, message: 'em dash (use a period or a comma
 export const START_BLOCK = [
   '## Before you start',
   '',
-  '- If Taskade tools are in your tool list, skip this section. If your client loads tools on demand, search the list first.',
-  '- If the Taskade plugin is installed or your client has a Taskade server, and no Taskade tools show, ask the user to sign in to that server. Do not add a second server. Only with no Taskade server at all, connect `https://www.taskade.com/mcp` before the first step that calls a Taskade tool. Follow "Connect" in `https://www.taskade.com/SKILL.md`, or in the taskade skill when it is installed.',
+  '- If Taskade workspace tools such as `list_spaces` are in your tool list, skip this section. A sign-in tool of your client is not a Taskade tool. If your client loads tools on demand, search the list first.',
+  '- If the Taskade plugin is installed or your client has a Taskade server, and no Taskade tools show, ask the user to sign in to that server. In Claude Code the user runs `/mcp`, picks taskade and signs in. In another client the user signs in from the connector or server settings of the client. Do not add a second server. Only with no Taskade server at all, connect `https://www.taskade.com/mcp` before the first step that calls a Taskade tool. Follow "Connect" in `https://www.taskade.com/SKILL.md`, or in the taskade skill when it is installed.',
   '- MCP access is part of every paid Taskade plan, not Free. A workspace on the Free plan does not appear in `list_spaces`. If the response has `hiddenForPlan` and a `hint`, show the hint to the user. The hint holds the link to the plans.',
   '- If a later call fails with a plan error, link `https://www.taskade.com/pricing`. If the user cannot connect, do only the steps that need no Taskade tool, and name the steps that are left.',
   '',
@@ -129,10 +129,16 @@ export function frontmatterOf(text) {
 // Removes fenced code blocks (also indented ones) and inline code, so that a Markdown example is
 // not read as a link.
 function withoutCode(text) {
-  return text
-    .replace(/^[ \t]*(`{3,}|~{3,})[^\n]*\n[\s\S]*?\n[ \t]*\1[^\n]*$/gm, '')
-    .replace(/(`+)[^\n]*?\1/g, '');
+  return withoutFences(text).replace(/(`+)[^\n]*?\1/g, '');
 }
+
+// Removes fenced code blocks (also indented ones) and keeps inline code.
+function withoutFences(text) {
+  return text.replace(/^[ \t]*(`{3,}|~{3,})[^\n]*\n[\s\S]*?\n[ \t]*\1[^\n]*$/gm, '');
+}
+
+// The heading of the start block, as a line of its own.
+const START_HEADING = /^## Before you start[ \t]*$/gm;
 
 // Returns each URL that carries a prompt parameter and is not /create.
 // The URL is the text from the first `https://`, or else from the first `/`, up to the parameter.
@@ -232,18 +238,37 @@ function checkSkills(root) {
         `${label}: description has ${description.length} characters, the limit is ${DESCRIPTION_LIMIT}`,
       );
     }
-    const copies = text.replace(/\r\n/g, '\n').split(START_BLOCK).length - 1;
-    if (!START_BLOCK_EXEMPT.has(name) && copies !== 1) {
+    // The block and its heading count only outside code fences.
+    const prose = withoutFences(text.replace(/\r\n/g, '\n'));
+    const copies = prose.split(START_BLOCK).length - 1;
+    const headings = [...prose.matchAll(START_HEADING)].length;
+    if (!START_BLOCK_EXEMPT.has(name) && (copies !== 1 || headings !== 1)) {
       problems.push(
-        `${label}: the "Before you start" block must be in the skill once, equal to START_BLOCK in scripts/check.mjs (found ${copies})`,
+        `${label}: the "Before you start" block must be in the skill once, equal to START_BLOCK in scripts/check.mjs, with one "## Before you start" heading outside code (found ${copies} blocks and ${headings} headings)`,
       );
     }
-    for (const match of text.matchAll(/`(references\/[^`\s]+)`/g)) {
-      if (!existsSync(join(skillsDir, name, match[1]))) {
+    const folder = resolve(skillsDir, name);
+    for (const match of text.matchAll(/`(?![a-z]+:\/\/)([^`\s]*references\/[^`\s]+)`/g)) {
+      const target = resolve(folder, match[1]);
+      if (!target.startsWith(folder + sep) || !existsSync(target)) {
         problems.push(`${label}: ${match[1]} is not in the folder of this skill`);
       }
     }
-    for (const match of withoutCode(text).matchAll(/\]\((?!https?:|#|mailto:)([^)\s]+)\)/g)) {
+    // A path that names the folder of another skill, in any form, outside a URL.
+    const withoutUrls = text.replace(/https?:\/\/\S+/g, '');
+    for (const match of withoutUrls.matchAll(/(?<![\w.-])([a-z0-9-]+)\/(?:references|SKILL\.md)/g)) {
+      if (match[1] !== name && names.includes(match[1])) {
+        problems.push(`${label}: ${match[0]} names a file in the folder of another skill`);
+      }
+    }
+    const linkTargets = [
+      ...[...withoutCode(text).matchAll(/\]\((?!https?:|#|mailto:)([^)\s]+)\)/g)].map((m) => m[1]),
+      ...[...withoutFences(text).matchAll(/^[ \t]{0,3}\[[^\]\n]+\]:[ \t]*<?([^\s>]+)>?/gm)]
+        .map((m) => m[1])
+        .filter((target) => !/^(?:https?:|#|mailto:)/.test(target)),
+    ];
+    for (const linkTarget of linkTargets) {
+      const match = [null, linkTarget];
       const target = resolve(skillsDir, name, match[1].replace(/#.*$/, ''));
       if (!target.startsWith(resolve(skillsDir, name) + sep)) {
         problems.push(`${label}: link target ${match[1]} is outside the folder of this skill`);
@@ -652,7 +677,7 @@ const SELF_TEST = [
   {
     name: 'a start block that is in a job skill two times',
     change: (root) => edit(root, `${PLUGIN}/skills/taskade-report/SKILL.md`, /$/, `\n${START_BLOCK}`),
-    expect: '(found 2)',
+    expect: 'found 2 blocks',
   },
   {
     name: 'a new job skill with no start block',
@@ -686,6 +711,61 @@ const SELF_TEST = [
         '\nRead [rows](../taskade-build-app/references/sample-rows.md).\n',
       ),
     expect: 'outside the folder of this skill',
+  },
+  {
+    name: 'a backticked path into another skill folder',
+    change: (root) =>
+      edit(
+        root,
+        `${PLUGIN}/skills/taskade-report/SKILL.md`,
+        /$/,
+        '\nRead `../taskade-build-app/references/sample-rows.md`.\n',
+      ),
+    expect: '../taskade-build-app/references/sample-rows.md is not in the folder of this skill',
+  },
+  {
+    name: 'a reference-style link into another skill folder',
+    change: (root) =>
+      edit(
+        root,
+        `${PLUGIN}/skills/taskade-report/SKILL.md`,
+        /$/,
+        '\nRead [the rows][r].\n\n[r]: ../taskade-build-app/references/sample-rows.md\n',
+      ),
+    expect: 'link target ../taskade-build-app/references/sample-rows.md is outside the folder of this skill',
+  },
+  {
+    name: 'a plain-text path into another skill folder',
+    change: (root) =>
+      edit(
+        root,
+        `${PLUGIN}/skills/taskade-report/SKILL.md`,
+        /$/,
+        '\nRead taskade-build-app/references/sample-rows.md for the rows.\n',
+      ),
+    expect: 'names a file in the folder of another skill',
+  },
+  {
+    name: 'a second start block heading with other text',
+    change: (root) =>
+      edit(
+        root,
+        `${PLUGIN}/skills/taskade-report/SKILL.md`,
+        /$/,
+        '\n## Before you start\n\n- Connect any server.\n',
+      ),
+    expect: 'found 1 blocks and 2 headings',
+  },
+  {
+    name: 'a start block only inside a code fence',
+    change: (root) =>
+      edit(
+        root,
+        `${PLUGIN}/skills/taskade-report/SKILL.md`,
+        START_BLOCK,
+        `\`\`\`markdown\n${START_BLOCK}\`\`\`\n`,
+      ),
+    expect: 'found 0 blocks and 0 headings',
   },
   {
     name: 'two copies of a reference file that differ',

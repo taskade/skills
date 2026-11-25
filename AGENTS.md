@@ -8,7 +8,7 @@ This repository holds agent skills for [Taskade](https://www.taskade.com). The s
 - The tools come from the hosted Taskade MCP server: `https://www.taskade.com/mcp`. The user signs in with a Taskade account through OAuth.
 - MCP access is part of every paid Taskade plan (Starter and up).
 - The skill `taskade-markdown`, the view advice of `taskade`, and the plan and build request of `taskade-build-app` work with no connection. The user needs a Taskade account to import a file, to change a view or to start a build.
-- Taskade EVE builds an app and creates or edits an automation inside Taskade. Write the request for Taskade EVE. The owner publishes the app and chooses who can use it in Taskade.
+- Taskade EVE builds an app, creates an automation, and adds or removes its steps inside Taskade. Write the request for Taskade EVE. The owner publishes the app and chooses who can use it in Taskade. When the server lists the tools, the skills turn an automation On or Off, change a step setting, and set the sign-up of an app, each with a preview and the owner's yes.
 - Name each new skill `taskade-<verb>-<object>` for a job or `taskade-<noun>` for a reference. The front door stays `taskade`.
 
 Install commands:
